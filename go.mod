@@ -31,7 +31,7 @@ require (
 	github.com/yannh/kubeconform v0.6.7
 	go.uber.org/dig v1.18.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/sys v0.24.0
+	golang.org/x/sys v0.29.0
 	k8s.io/api v0.30.3
 	k8s.io/apiextensions-apiserver v0.30.3
 	k8s.io/apimachinery v0.30.3
@@ -144,7 +144,7 @@ require (
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/term v0.23.0 // indirect
+	golang.org/x/term v0.28.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
