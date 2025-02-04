@@ -6,56 +6,106 @@ on:
   merge_group:
   push:
     branches: [main]
+env:
+  GO_VERSION: '>=1.23.x'
 
 concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
   cancel-in-progress: true
 
 jobs:
+  update-go-modules:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: "**/*.sum"
+          check-latest: true
+
+      - name: Run go work sync
+        run: go work sync
+
+      - name: Run go mod tidy for each module
+        run: |
+          go mod tidy
+          for mod in ./pkg ./apis; do
+            if [ -f "$mod/go.mod" ]; then
+              (cd "$mod" && go mod tidy)
+            fi
+          done
+
+      - name: Detect changes
+        id: detect_changes
+        run: |
+          if git diff --quiet; then
+            echo "UPDATE=false" >> "$GITHUB_ENV"
+          else
+            echo "UPDATE=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Commit and push changes
+        if: env.UPDATE == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: sync dependencies with go work sync"
+          git push https://x-access-token:${{ env.PAT_TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.head_ref }}
+
   lint-unit-int:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.23.x'
-        cache-dependency-path: "**/*.sum"
-        check-latest: true
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: "**/*.sum"
+          check-latest: true
 
-    - name: Ensure code is sanitized
-      run: ./do CI:PostPush
+      - name: Ensure code is sanitized
+        run: ./do CI:PostPush
 
-    - name: Unit
-      run: ./do CI:Unit
+      - name: Unit
+        run: ./do CI:Unit
 
-    - name: Integration tests
-      run: ./do CI:Integration
-      env:
-        CARDBOARD_CONTAINER_RUNTIME: docker
+      - name: Integration tests
+        run: ./do CI:Integration
+        env:
+          CARDBOARD_CONTAINER_RUNTIME: docker
 
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v5
-      with:
-        files: .cache/unit/cover.txt,.cache/integration/cover.txt
-        token: ${{ secrets.CODECOV_TOKEN }}
-        fail_ci_if_error: ${{ github.event_name != 'pull_request' }}
-        verbose: true
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: .cache/unit/cover.txt,.cache/integration/cover.txt
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: ${{ github.event_name != 'pull_request' }}
+          verbose: true
 
-    - name: Archive unit test results
-      uses: actions/upload-artifact@v4
-      if: success() || failure()
-      with:
-        name: unit-test-results
-        path: .cache/unit
+      - name: Archive unit test results
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: unit-test-results
+          path: .cache/unit
 
-    - name: Archive integration test results
-      uses: actions/upload-artifact@v4
-      if: success() || failure()
-      with:
-        name: integration-test-results
-        path: .cache/integration
+      - name: Archive integration test results
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: integration-test-results
+          path: .cache/integration
