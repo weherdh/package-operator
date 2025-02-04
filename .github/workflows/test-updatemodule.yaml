@@ -1,0 +1,149 @@
+name: TestingUpdateModule
+
+on:
+  workflow_dispatch:
+  pull_request:
+  merge_group:
+  push:
+    branches: [main]
+
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
+jobs:
+  update-go-modules:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '>=1.22'
+          cache-dependency-path: "**/*.sum"
+          check-latest: true
+
+      - name: Check if GITHUB_TOKEN is available
+        run: echo "GITHUB_TOKEN is set"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run go mod tidy in main module
+        run: |
+          go mod tidy
+          git diff --exit-code || echo "Repo needs to be updated first"
+
+      - name: Detect changes in go.mod/go.sum
+        id: check_update
+        run: |
+          if git diff --exit-code go.mod go.sum; then
+            echo "No changes needed."
+            echo "UPDATE=false" >> $GITHUB_ENV
+          else
+            echo "Changes detected, need to commit."
+            echo "UPDATE=true" >> $GITHUB_ENV
+          fi
+
+      # git config --global user.name "weherdh"
+      # git config --global user.email "wehe@redhat.com"
+      # git commit -am "fix: sync dependencies with go mod tidy"
+      # git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.head_ref }}
+      - name: Commit and push changes
+        if: env.UPDATE == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -am "fix: sync dependencies with go mod tidy"
+          git push origin HEAD:${{ github.head_ref }}
+
+      - name: Update dependencies in submodules
+        run: |
+          echo "Locating submodules..."
+          SUBMODULES=$(find . -mindepth 2 -name "go.mod" | sort)
+
+          if [[ -z "$SUBMODULES" ]]; then
+            echo "No submodules found. Exiting..."
+            exit 0
+          fi
+
+          echo "Submodules found:"
+          echo "$SUBMODULES"
+
+          for submodule in $SUBMODULES; do
+            SUBMODULE_DIR=$(dirname "$submodule")
+            echo "Processing submodule: $SUBMODULE_DIR"
+
+            cd "$SUBMODULE_DIR" || exit 1
+
+            echo "Running 'go mod tidy' in $SUBMODULE_DIR..."
+            go mod tidy
+
+            if ! git diff --quiet; then
+              echo "Detected changes in $SUBMODULE_DIR"
+              echo "Committing and pushing submodule changes..."
+              git commit -am "fix: sync dependencies in $SUBMODULE_DIR"
+              git push origin HEAD:${{ github.head_ref }}
+            else
+              echo "No changes detected in $SUBMODULE_DIR."
+            fi
+
+            cd -  # Return to the previous directory
+          done
+
+          echo "Dependency synchronization completed."
+
+  lint-unit-int:
+    needs: update-go-modules
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '>=1.22'
+          cache-dependency-path: "**/*.sum"
+          check-latest: true
+
+      - name: Ensure code is sanitized
+        run: ./do CI:PostPush
+
+      - name: Unit tests
+        run: ./do CI:Unit
+
+      - name: Integration tests
+        run: ./do CI:Integration
+        env:
+          CARDBOARD_CONTAINER_RUNTIME: docker
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: .cache/unit/cover.txt,.cache/integration/cover.txt
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: ${{ github.event_name != 'pull_request' }}
+          verbose: true
+
+      - name: Archive unit test results
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: unit-test-results
+          path: .cache/unit
+
+      - name: Archive integration test results
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: integration-test-results
+          path: .cache/integration
