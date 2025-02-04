@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"pkg.package-operator.run/cardboard/run"
 	"pkg.package-operator.run/cardboard/sh"
@@ -35,5 +36,12 @@ func (Lint) govulnCheck() error {
 }
 
 func (Lint) validateGitClean() error {
-	return shr.Run("git", "diff", "--quiet", "--exit-code")
+	err := shr.Run("git", "diff", "--quiet", "--exit-code")
+	if err != nil {
+		if diffErr := shr.Run("git", "diff"); diffErr != nil {
+			return fmt.Errorf("failed to show uncommitted changes: %w", diffErr)
+		}
+		return err
+	}
+	return nil
 }
