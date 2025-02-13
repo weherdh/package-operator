@@ -30,77 +30,46 @@ jobs:
           cache-dependency-path: "**/*.sum"
           check-latest: true
 
-      - name: Check if GITHUB_TOKEN is available
-        run: echo "GITHUB_TOKEN is set"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run go mod tidy in main module
+      - name: Detect Go modules
+        id: detect_modules
         run: |
-          go mod tidy
-          git diff --exit-code || echo "Repo needs to be updated first"
+          echo "Finding all Go modules..."
+          MODULES=$(find . -mindepth 1 -name "go.mod" | sort | xargs -n1 dirname)
+          MODULES=". $MODULES"
+          echo "Detected modules: $MODULES"
+          echo "MODULES=$MODULES" >> $GITHUB_ENV
 
-      - name: Detect changes in go.mod/go.sum
-        id: check_update
+      - name: Run go mod tidy for all modules
         run: |
-          if git diff --exit-code go.mod go.sum; then
-            echo "No changes needed."
-            echo "UPDATE=false" >> $GITHUB_ENV
-          else
-            echo "Changes detected, need to commit."
-            echo "UPDATE=true" >> $GITHUB_ENV
-          fi
+          UPDATE=""
+          for module in $MODULES; do
+            echo "Processing module: $module"
+            cd "$module" || exit 1
+            go mod tidy
+            if ! git diff --quiet; then
+              echo "Detected changes in $module"
+              UPDATE="$UPDATE $module"
+              git add go.mod go.sum
+            fi
+            cd - > /dev/null
+          done
+          echo "UPDATE=$UPDATE" >> $GITHUB_ENV
 
-      # git config --global user.name "weherdh"
-      # git config --global user.email "wehe@redhat.com"
-      # git commit -am "fix: sync dependencies with go mod tidy"
-      # git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.head_ref }}
+      - name: Run go work sync
+        if: env.UPDATE != ''
+        run: go work sync
+
       - name: Commit and push changes
-        if: env.UPDATE == 'true'
+        if: env.UPDATE != ''
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -am "fix: sync dependencies with go mod tidy"
+          git commit -m "fix: sync dependencies with go mod tidy" || echo "No changes to commit"
           git push origin HEAD:${{ github.head_ref }}
 
-      - name: Update dependencies in submodules
-        run: |
-          echo "Locating submodules..."
-          SUBMODULES=$(find . -mindepth 2 -name "go.mod" | sort)
-
-          if [[ -z "$SUBMODULES" ]]; then
-            echo "No submodules found. Exiting..."
-            exit 0
-          fi
-
-          echo "Submodules found:"
-          echo "$SUBMODULES"
-
-          for submodule in $SUBMODULES; do
-            SUBMODULE_DIR=$(dirname "$submodule")
-            echo "Processing submodule: $SUBMODULE_DIR"
-
-            cd "$SUBMODULE_DIR" || exit 1
-
-            echo "Running 'go mod tidy' in $SUBMODULE_DIR..."
-            go mod tidy
-
-            if ! git diff --quiet; then
-              echo "Detected changes in $SUBMODULE_DIR"
-              echo "Committing and pushing submodule changes..."
-              git commit -am "fix: sync dependencies in $SUBMODULE_DIR"
-              git push origin HEAD:${{ github.head_ref }}
-            else
-              echo "No changes detected in $SUBMODULE_DIR."
-            fi
-
-            cd -  # Return to the previous directory
-          done
-
-          echo "Dependency synchronization completed."
-
   lint-unit-int:
-    needs: update-go-modules
+    needs: [ update-go-modules ]
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
