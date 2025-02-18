@@ -24,7 +24,7 @@ func (ci *CI) Lint(_ context.Context, _ []string) error {
 	return lint.glciCheck()
 }
 
-// PostPush runs autofixes in CI and validates that the repo is clean afterwards.
+// PostPush runs automatic fixes in CI and validates that the repo is clean afterwards.
 func (ci *CI) PostPush(ctx context.Context, args []string) error {
 	self := run.Meth1(ci, ci.PostPush, args)
 	if err := mgr.ParallelDeps(ctx, self,
