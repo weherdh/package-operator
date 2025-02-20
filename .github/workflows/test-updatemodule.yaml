@@ -21,7 +21,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Ensures we have the full history
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -45,14 +45,14 @@ jobs:
           UPDATE=""
           for module in $MODULES; do
             echo "Processing module: $module"
-            cd "$module" || exit 1
+            pushd "$module" || exit 1
             go mod tidy
             if ! git diff --quiet; then
               echo "Detected changes in $module"
               UPDATE="$UPDATE $module"
               git add go.mod go.sum
             fi
-            cd - > /dev/null
+            popd
           done
           echo "UPDATE=$UPDATE" >> $GITHUB_ENV
 
@@ -65,7 +65,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -m "fix: sync dependencies with go mod tidy" || echo "No changes to commit"
+          git commit -m "fix: sync dependencies with go mod tidy / go work sync" || echo "No changes to commit"
           git push origin HEAD:${{ github.head_ref }}
 
   lint-unit-int:
@@ -77,6 +77,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Ensure we have the latest commits
+        run: |
+          git fetch origin ${{ github.head_ref }}
+          git reset --hard origin/${{ github.head_ref }}
 
       - name: Setup Go
         uses: actions/setup-go@v5
