@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.23.4
 
 require (
-	github.com/google/cel-go v0.22.1
+	github.com/google/cel-go v0.23.2
 	github.com/stretchr/testify v1.10.0
 	k8s.io/apimachinery v0.32.1
 	k8s.io/apiserver v0.32.1
