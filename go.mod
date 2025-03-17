@@ -2,7 +2,7 @@ module package-operator.run
 
 go 1.23.0
 
-toolchain go1.23.4
+toolchain go1.24.1
 
 replace (
 	package-operator.run/apis => ./apis
@@ -33,7 +33,7 @@ require (
 	go.uber.org/dig v1.18.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20241004190924-225e2abe05e6
-	golang.org/x/net v0.35.0
+	golang.org/x/net v0.36.0
 	golang.org/x/sys v0.30.0
 	k8s.io/api v0.32.1
 	k8s.io/apiextensions-apiserver v0.32.1
@@ -149,7 +149,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.34.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.33.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/oauth2 v0.26.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/term v0.29.0 // indirect
