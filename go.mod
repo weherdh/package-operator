@@ -2,7 +2,7 @@ module package-operator.run
 
 go 1.23.0
 
-toolchain go1.23.4
+toolchain go1.24.1
 
 replace (
 	package-operator.run/apis => ./apis
@@ -50,12 +50,13 @@ require (
 	pkg.package-operator.run/cardboard/modules/kubeclients v0.0.4
 	pkg.package-operator.run/cardboard/modules/oci v0.0.3
 	pkg.package-operator.run/semver v0.0.0-20231211161337-aa8390953339
-	sigs.k8s.io/controller-runtime v0.20.1
-	sigs.k8s.io/kind v0.26.0
+	sigs.k8s.io/controller-runtime v0.20.3
+	sigs.k8s.io/kind v0.27.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
+	al.essio.dev/pkg/shellescape v1.5.1 // indirect
 	atomicgo.dev/cursor v0.2.0 // indirect
 	atomicgo.dev/keyboard v0.2.9 // indirect
 	atomicgo.dev/schedule v0.1.0 // indirect
@@ -64,7 +65,6 @@ require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.3.1 //indirect
-	github.com/alessio/shellescape v1.4.2 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -166,7 +166,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/component-base v0.32.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2 // indirect
+	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.32.0 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.5.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
 )
