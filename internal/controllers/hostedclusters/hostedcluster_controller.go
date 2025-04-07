@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	corev1alpha1 "package-operator.run/apis/core/v1alpha1"
+	"package-operator.run/internal/constants"
 	"package-operator.run/internal/controllers/hostedclusters/hypershift/v1beta1"
 	"package-operator.run/internal/ownerhandling"
 )
@@ -69,7 +70,7 @@ func (c *HostedClusterController) Reconcile(
 	ctx context.Context, req ctrl.Request,
 ) (ctrl.Result, error) {
 	log := c.log.WithValues("HostedCluster", req.String())
-	defer log.V(1).Info("reconciled")
+	defer log.V(constants.LogLevelInfo).Info("reconciled")
 
 	ctx = logr.NewContext(ctx, log)
 	hostedCluster := &v1beta1.HostedCluster{}
@@ -79,12 +80,12 @@ func (c *HostedClusterController) Reconcile(
 	}
 
 	if !hostedCluster.DeletionTimestamp.IsZero() {
-		log.V(1).Info("HostedCluster is deleting")
+		log.V(constants.LogLevelInfo).Info("HostedCluster is deleting")
 		return ctrl.Result{}, nil
 	}
 
 	if !meta.IsStatusConditionTrue(hostedCluster.Status.Conditions, v1beta1.HostedClusterAvailable) {
-		log.V(1).Info("waiting for HostedCluster to become ready")
+		log.V(constants.LogLevelInfo).Info("waiting for HostedCluster to become ready")
 		return ctrl.Result{}, nil
 	}
 

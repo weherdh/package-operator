@@ -13,4 +13,7 @@ const (
 	ForceAdoptionEnvironmentVariable = "PKO_FORCE_ADOPTION"
 	// FieldOwner name of the PKO field manager for server-side apply.
 	FieldOwner = "package-operator"
+
+	// Verbosity level for Info logs that are hidden by default.
+	LogLevelInfo = 1
 )
